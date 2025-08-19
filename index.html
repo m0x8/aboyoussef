@@ -75,11 +75,43 @@
     .totals-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:14px}
     .totals-card{background:#fff;border:1px solid var(--border);padding:10px 14px;border-radius:10px;min-width:150px;text-align:center}
 
-    /* RTL adjustments on small screens: stack buttons */
-    @media(max-width:820px){
+    /* ✅ نسخة الموبايل */
+    @media(max-width:768px){
       .month-nav{flex-direction:column;gap:10px}
-      th, td{font-size:13px;padding:6px}
-      input, textarea, button{font-size:14px}
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+      table tr {
+        margin-bottom: 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      }
+      table th {display: none;}
+      table td {
+        border: none;
+        padding: 6px 0;
+        text-align: right;
+      }
+      table td:before {
+        content: attr(data-label);
+        display: block;
+        font-weight: bold;
+        margin-bottom: 4px;
+        color: var(--secondary);
+        font-size: 14px;
+      }
+      input[type="number"], 
+      input[type="text"], 
+      textarea {
+        font-size: 16px;
+        width: 100%;
+        padding: 12px;
+      }
+      textarea {min-height: 80px;}
     }
   </style>
 </head>
@@ -94,7 +126,7 @@
       <div class="field"><button class="btn" id="loginBtn">دخول</button></div>
     </div>
 
-    <!-- المحتوى الرئيسي مخفي افتراضياً -->
+    <!-- المحتوى الرئيسي -->
     <div class="card main" id="mainCard" style="display:none">
       <h2>جدول ساعات العمل</h2>
 
@@ -122,51 +154,28 @@
   </div>
 
 <script>
-/*
-  Authentication (client-side):
-  - user: aboyoussef
-  - pass: aboyoussef
-  After successful login we set sessionStorage.setItem('work_auth','1')
-  On load we check sessionStorage to show/hide UI.
-*/
-
 const AUTH_USER = 'aboyoussef';
 const AUTH_PASS = 'aboyoussef';
-
 const days = ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 let current = new Date();
 let currentMonth = current.getMonth();
 let currentYear = current.getFullYear();
 
-/* ---------- Auth logic ---------- */
 const loginCard = document.getElementById('loginCard');
 const mainCard = document.getElementById('mainCard');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const loginError = document.getElementById('loginError');
 
-function isAuthenticated(){
-  return sessionStorage.getItem('work_auth') === '1';
-}
-
-function showLogin(){
-  loginCard.style.display = 'block';
-  mainCard.style.display = 'none';
-}
-
-function showMain(){
-  loginCard.style.display = 'none';
-  mainCard.style.display = 'block';
-  renderMonth();
-}
-
+function isAuthenticated(){return sessionStorage.getItem('work_auth') === '1';}
+function showLogin(){loginCard.style.display = 'block';mainCard.style.display = 'none';}
+function showMain(){loginCard.style.display = 'none';mainCard.style.display = 'block';renderMonth();}
 function loginAttempt(){
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value;
   if(u === AUTH_USER && p === AUTH_PASS){
     sessionStorage.setItem('work_auth','1');
     loginError.style.display = 'none';
-    // clear password field for safety
     document.getElementById('password').value = '';
     showMain();
   } else {
@@ -174,38 +183,18 @@ function loginAttempt(){
     loginError.style.display = 'block';
   }
 }
+function logout(){sessionStorage.removeItem('work_auth');showLogin();}
 
-function logout(){
-  sessionStorage.removeItem('work_auth');
-  // optional: clear inputs & data view
-  showLogin();
-}
-
-/* attach events */
 loginBtn.addEventListener('click', loginAttempt);
 logoutBtn.addEventListener('click', logout);
-document.getElementById('password').addEventListener('keydown', function(e){
-  if(e.key === 'Enter') loginAttempt();
-});
-document.getElementById('username').addEventListener('keydown', function(e){
-  if(e.key === 'Enter') document.getElementById('password').focus();
-});
+document.getElementById('password').addEventListener('keydown', e=>{if(e.key === 'Enter') loginAttempt();});
+document.getElementById('username').addEventListener('keydown', e=>{if(e.key === 'Enter') document.getElementById('password').focus();});
 
-/* ---------- Data storage utils ---------- */
-function storageKey(year,month){
-  return `workhours_${year}_${month}`;
-}
-function loadData(year,month){
-  const raw = localStorage.getItem(storageKey(year,month));
-  return raw ? JSON.parse(raw) : {};
-}
-function saveDataFor(year,month,data){
-  localStorage.setItem(storageKey(year,month), JSON.stringify(data));
-}
+function storageKey(year,month){return `workhours_${year}_${month}`;}
+function loadData(year,month){const raw = localStorage.getItem(storageKey(year,month));return raw ? JSON.parse(raw) : {};}
+function saveDataFor(year,month,data){localStorage.setItem(storageKey(year,month), JSON.stringify(data));}
 
-/* ---------- Rendering ---------- */
 function monthLabelText(y,m){
-  // عرض بصيغة "2025 - 8 (أغسطس)" لو حبيت نقدر نضيف أسماء الشهور
   const monthNames = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
   return `${y} - ${m+1} (${monthNames[m] || ''})`;
 }
@@ -216,137 +205,84 @@ function renderMonth(){
   container.innerHTML = '';
   const data = loadData(currentYear,currentMonth);
 
-  // افتراضياً 4 أسابيع - ممكن تزودها لو عايز
   for(let w=1; w<=4; w++){
     const wrapper = document.createElement('div');
     wrapper.className = 'week-wrapper';
-
     const table = document.createElement('table');
     let head = `<tr>
-      <th>اليوم</th>
-      <th>ساعات أساسية</th>
-      <th>ساعات إضافية</th>
-      <th>المكان</th>
-      <th>ملاحظات</th>
+      <th>اليوم</th><th>ساعات أساسية</th><th>ساعات إضافية</th><th>المكان</th><th>ملاحظات</th>
     </tr>`;
     let rows = '';
     days.forEach(day => {
       const key = `${w}_${day}`;
       const entry = data[key] || {basic:'', extra:'', place:'', note:''};
-      // ensure values are strings (to avoid undefined)
-      const basicVal = (entry.basic === undefined || entry.basic === null) ? '' : entry.basic;
-      const extraVal = (entry.extra === undefined || entry.extra === null) ? '' : entry.extra;
-      const placeVal = (entry.place === undefined || entry.place === null) ? '' : entry.place;
-      const noteVal  = (entry.note === undefined || entry.note === null) ? '' : entry.note;
+      const basicVal = entry.basic || '';
+      const extraVal = entry.extra || '';
+      const placeVal = entry.place || '';
+      const noteVal  = entry.note  || '';
 
       rows += `<tr>
-        <td>${day}</td>
-        <td><input type="number" min="0" max="99" inputmode="numeric" pattern="[0-9]*" value="${basicVal}" onchange="onFieldChange(${w},'${day}',this,'basic')"></td>
-        <td><input type="number" min="0" max="99" inputmode="numeric" pattern="[0-9]*" value="${extraVal}" onchange="onFieldChange(${w},'${day}',this,'extra')"></td>
-        <td><input type="text" value="${placeVal}" onchange="onFieldChange(${w},'${day}',this,'place')"></td>
-        <td><textarea onchange="onFieldChange(${w},'${day}',this,'note')">${noteVal}</textarea></td>
+        <td data-label="اليوم">${day}</td>
+        <td data-label="ساعات أساسية"><input type="number" min="0" max="99" value="${basicVal}" onchange="onFieldChange(${w},'${day}',this,'basic')"></td>
+        <td data-label="ساعات إضافية"><input type="number" min="0" max="99" value="${extraVal}" onchange="onFieldChange(${w},'${day}',this,'extra')"></td>
+        <td data-label="المكان"><input type="text" value="${placeVal}" onchange="onFieldChange(${w},'${day}',this,'place')"></td>
+        <td data-label="ملاحظات"><textarea onchange="onFieldChange(${w},'${day}',this,'note')">${noteVal}</textarea></td>
       </tr>`;
     });
-
     table.innerHTML = head + rows;
     wrapper.appendChild(table);
 
-    // week summary
     const weekTotals = calcWeekTotals(data,w);
     const summary = document.createElement('div');
     summary.className = 'week-summary';
     summary.innerHTML = `<strong>مجموع الأسبوع ${w}</strong>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
-        <div style="min-width:120px;text-align:center">ساعات أساسية: <strong>${weekTotals.basic}</strong></div>
-        <div style="min-width:120px;text-align:center">ساعات إضافية: <strong>${weekTotals.extra}</strong></div>
-        <div style="min-width:120px;text-align:center">الإجمالي: <strong>${weekTotals.total}</strong></div>
+        <div>ساعات أساسية: <strong>${weekTotals.basic}</strong></div>
+        <div>ساعات إضافية: <strong>${weekTotals.extra}</strong></div>
+        <div>الإجمالي: <strong>${weekTotals.total}</strong></div>
       </div>`;
     wrapper.appendChild(summary);
-
     container.appendChild(wrapper);
   }
-
   calcMonthTotalsAndUpdateUI();
 }
 
-/* ---------- Handlers ---------- */
 function onFieldChange(week, day, el, field){
-  // clean value: for numbers limit to 0..99
   let val = el.value;
   if(field === 'basic' || field === 'extra'){
-    // remove leading zeros and non-digits
     val = val.replace(/[^\d]/g,'');
-    if(val === '') val = '';
-    else {
-      let n = parseInt(val,10);
-      if(isNaN(n)) n = '';
-      else {
-        if(n < 0) n = 0;
-        if(n > 99) n = 99;
-      }
-      val = n === '' ? '' : String(n);
-    }
+    if(val !== ''){let n = parseInt(val,10);if(isNaN(n)) n='';else{if(n<0)n=0;if(n>99)n=99;}val=n+'';}
     el.value = val;
   }
-
-  const key = storageKey(currentYear,currentMonth);
   const data = loadData(currentYear,currentMonth);
   const entryKey = `${week}_${day}`;
   if(!data[entryKey]) data[entryKey] = {basic:'',extra:'',place:'',note:''};
   data[entryKey][field] = val;
   saveDataFor(currentYear,currentMonth,data);
-
-  // re-render totals (but not whole page to keep cursor position). Simpler approach: re-render whole month.
   renderMonth();
 }
 
-/* ---------- Totals ---------- */
 function calcWeekTotals(data, week){
   let basic = 0, extra = 0;
   days.forEach(d=>{
     const e = data[`${week}_${d}`];
-    if(e){
-      basic += Number(e.basic) || 0;
-      extra += Number(e.extra) || 0;
-    }
+    if(e){basic += Number(e.basic)||0;extra += Number(e.extra)||0;}
   });
   return {basic, extra, total: basic + extra};
 }
-
 function calcMonthTotalsAndUpdateUI(){
   const data = loadData(currentYear,currentMonth);
-  let mb = 0, me = 0;
-  for(let w=1; w<=4; w++){
-    const t = calcWeekTotals(data,w);
-    mb += t.basic; me += t.extra;
-  }
+  let mb=0,me=0;
+  for(let w=1; w<=4; w++){const t=calcWeekTotals(data,w);mb+=t.basic;me+=t.extra;}
   document.getElementById('monthBasic').innerText = mb;
   document.getElementById('monthExtra').innerText = me;
   document.getElementById('monthTotal').innerText = mb + me;
 }
 
-/* ---------- Month navigation ---------- */
-document.getElementById('prevMonthBtn').addEventListener('click', ()=>{
-  if(currentMonth === 0){ currentMonth = 11; currentYear--; }
-  else currentMonth--;
-  renderMonth();
-});
-document.getElementById('nextMonthBtn').addEventListener('click', ()=>{
-  if(currentMonth === 11){ currentMonth = 0; currentYear++; }
-  else currentMonth++;
-  renderMonth();
-});
+document.getElementById('prevMonthBtn').addEventListener('click', ()=>{if(currentMonth===0){currentMonth=11;currentYear--;}else currentMonth--;renderMonth();});
+document.getElementById('nextMonthBtn').addEventListener('click', ()=>{if(currentMonth===11){currentMonth=0;currentYear++;}else currentMonth++;renderMonth();});
 
-/* ---------- On load: check auth ---------- */
-window.addEventListener('load', ()=>{
-  if(isAuthenticated()) showMain();
-  else showLogin();
-
-  // Prevent accidental access to main DOM by keyboard (just UI measure)
-  // Note: this does not prevent someone from viewing source.
-});
-
-/* expose some functions for inline handlers (used in generated HTML) */
+window.addEventListener('load', ()=>{if(isAuthenticated()) showMain(); else showLogin();});
 window.onFieldChange = onFieldChange;
 window.renderMonth = renderMonth;
 </script>
